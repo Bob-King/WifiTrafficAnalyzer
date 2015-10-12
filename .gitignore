@@ -27,6 +27,14 @@
 *.i*86
 *.x86_64
 *.hex
+storer/storer
+test/sender
 
 # Debug files
 *.dSYM/
+
+# Backup files
+*~
+
+# Output directories
+analyzer/bin/

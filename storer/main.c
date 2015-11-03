@@ -17,21 +17,39 @@
 
 #include "clisrv.h"
 
-#define DATABASE_FILE "/var/run/wta/db.txt"
-
 int main(int argc, char *argv[])
 {
 	struct sockaddr_in srv;
 	int sockfd;
 	char buffer[MAX_UDP_BUFFER + 1];
 	int n;
+	char *path;
 	FILE *file;
+	int c;
 
-	file = fopen(DATABASE_FILE, "a");
-	if (!file)
+	path = NULL;
+	while ((c = getopt(argc, argv, "o:")) != -1)
 	{
-		fprintf(stderr, "Failed to open database file!\n");
-		return -1;
+		switch (c)
+		{
+			case 'o':
+				path = optarg;
+				break;
+		}
+	}
+
+	if (path)
+	{
+		file = fopen(path, "a");
+		if (!file)
+		{
+			fprintf(stderr, "Failed to open database file(%s)!\n", path);
+			return -1;
+		}
+	}
+	else
+	{
+		file = stdout;
 	}
 
 	sockfd = socket(PF_INET, SOCK_DGRAM, 0);
@@ -44,13 +62,15 @@ int main(int argc, char *argv[])
 	memset(&srv, 0, sizeof(srv));
 	srv.sin_family = AF_INET;
 	srv.sin_addr.s_addr = htonl(INADDR_ANY);
-	srv.sin_port = UDP_SERVER_PORT;
+	srv.sin_port = htons(UDP_SERVER_PORT);
 
 	if (bind(sockfd, (struct sockaddr *) &srv, sizeof(srv)) < 0)
 	{
 		fprintf(stderr, "Failed to bind udp server!\n");
 		return -2;
 	}
+
+	printf("Listening port %d\n", (int)srv.sin_port);
 
 	for ( ; ; )
 	{
@@ -61,7 +81,7 @@ int main(int argc, char *argv[])
 			continue;
 		}
 
-		if (n >= sizeof(buffer))
+		if (n >= (int)sizeof(buffer))
 		{
 			fprintf(stderr, "The recived data is out of length. Drop it!\n");
 			continue;
@@ -69,9 +89,7 @@ int main(int argc, char *argv[])
 
 		buffer[n] = '\0';
 
-		fprintf(stdout, "Received: %s\n", buffer);
-
-		fputs(buffer, file);
+		fprintf(file, "%s\n", buffer);
 	}
 
 	return 0;

@@ -1,0 +1,247 @@
+diff --git a/hostapd/Android.mk b/hostapd/Android.mk
+index 1d368a0..34dcc76 100644
+--- a/hostapd/Android.mk
++++ b/hostapd/Android.mk
+@@ -38,6 +38,8 @@ endif
+ L_CFLAGS += -DCONFIG_CTRL_IFACE_CLIENT_DIR=\"/data/misc/wifi/sockets\"
+ L_CFLAGS += -DCONFIG_CTRL_IFACE_DIR=\"/data/system/hostapd\"
+ 
++L_CFLAGS += -DCONFIG_MONITOR
++
+ # To force sizeof(enum) = 4
+ ifeq ($(TARGET_ARCH),arm)
+ L_CFLAGS += -mabi=aapcs-linux
+@@ -96,6 +98,7 @@ OBJS += src/ap/pmksa_cache_auth.c
+ OBJS += src/ap/ieee802_11_shared.c
+ OBJS += src/ap/beacon.c
+ OBJS += src/ap/bss_load.c
++OBJS += src/ap/monitor.c
+ OBJS_d =
+ OBJS_p =
+ LIBS =
+diff --git a/src/ap/Makefile b/src/ap/Makefile
+index 98788fe..043761b 100644
+--- a/src/ap/Makefile
++++ b/src/ap/Makefile
+@@ -59,6 +59,7 @@ LIB_OBJS= \
+ 	wpa_auth_glue.o \
+ 	wpa_auth_ie.o \
+ 	wps_hostapd.o \
++	monitor.o \
+ 	x_snoop.o
+ 
+ libap.a: $(LIB_OBJS)
+diff --git a/src/ap/beacon.c b/src/ap/beacon.c
+index 98d6832..31d05fd 100644
+--- a/src/ap/beacon.c
++++ b/src/ap/beacon.c
+@@ -29,6 +29,7 @@
+ #include "beacon.h"
+ #include "hs20.h"
+ #include "dfs.h"
++#include "monitor.h"
+ 
+ 
+ #ifdef NEED_AP_MLME
+@@ -569,6 +570,10 @@ void handle_probe_req(struct hostapd_data *hapd,
+ 		return;
+ 	ie_len = len - (IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req));
+ 
++#ifdef CONFIG_MONITOR
++	hostapd_monitor_probe_req_rx(hapd, mgmt, len, ssi_signal);
++#endif
++
+ 	for (i = 0; hapd->probereq_cb && i < hapd->num_probereq_cb; i++)
+ 		if (hapd->probereq_cb[i].cb(hapd->probereq_cb[i].ctx,
+ 					    mgmt->sa, mgmt->da, mgmt->bssid,
+diff --git a/src/ap/hostapd.c b/src/ap/hostapd.c
+index e0f87d7..4ffd109 100644
+--- a/src/ap/hostapd.c
++++ b/src/ap/hostapd.c
+@@ -42,6 +42,7 @@
+ #include "x_snoop.h"
+ #include "dhcp_snoop.h"
+ #include "ndisc_snoop.h"
++#include "monitor.h"
+ 
+ 
+ static int hostapd_flush_old_stations(struct hostapd_data *hapd, u16 reason);
+@@ -1098,6 +1099,13 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
+ 	if (hapd->driver && hapd->driver->set_operstate)
+ 		hapd->driver->set_operstate(hapd->drv_priv, 1);
+ 
++#ifdef CONFIG_MONITOR
++	if (hostapd_monitor_init(hapd))
++	{
++		return -1;
++	}
++#endif
++
+ 	return 0;
+ }
+ 
+diff --git a/src/ap/hostapd.h b/src/ap/hostapd.h
+index b1a7980..3807e26 100644
+--- a/src/ap/hostapd.h
++++ b/src/ap/hostapd.h
+@@ -26,6 +26,9 @@ union wps_event_data;
+ #ifdef CONFIG_MESH
+ struct mesh_conf;
+ #endif /* CONFIG_MESH */
++#ifdef CONFIG_MONITOR
++struct monitor_data;
++#endif
+ 
+ struct hostapd_iface;
+ 
+@@ -277,6 +280,10 @@ struct hostapd_data {
+ 
+ 	struct l2_packet_data *l2_test;
+ #endif /* CONFIG_TESTING_OPTIONS */
++
++#ifdef CONFIG_MONITOR
++	struct monitor_data *mon_data;
++#endif
+ };
+ 
+ 
+diff --git a/src/ap/monitor.c b/src/ap/monitor.c
+new file mode 100644
+index 0000000..d4d2c8a
+--- /dev/null
++++ b/src/ap/monitor.c
+@@ -0,0 +1,97 @@
++/**
++ * All rights reserved.
++ *
++ * Name:		monitor.c
++ * Created by:	King Li
++ * Created:		10/12/2015 17:58:35
++ * Purpose:
++ */
++
++
++#include "monitor.h"
++
++#ifdef CONFIG_MONITOR
++#include "utils/includes.h"
++#include "utils/common.h"
++#include "common/ieee802_11_defs.h"
++#include "common/ieee802_11_common.h"
++#include "common/hw_features_common.h"
++#include "wps/wps_defs.h"
++#include "p2p/p2p.h"
++#include "hostapd.h"
++
++#include <time.h>
++#include <string.h>
++
++#define DEFAULT_SERVER_ADDR ("127.0.0.1")
++#define DEFAULT_SERVER_PORT (0x135)
++
++static int monitor_data_init(struct monitor_data *mon_data);
++static int monitor_report_probe_req(struct monitor_data *mon_data,
++		const u8 *ra, const u8 *ta, u16 seq, int rssi);
++
++int hostapd_monitor_init(struct hostapd_data *hapd)
++{
++	hapd->mon_data = (struct monitor_data *)malloc(sizeof(struct monitor_data));
++	if (!hapd->mon_data)
++	{
++		wpa_printf(MSG_ERROR, "[monitor] failed to allocate memory for monitor data");
++		return -ENOMEM;
++	}
++
++	return monitor_data_init(hapd->mon_data);
++}
++
++
++int hostapd_monitor_probe_req_rx(struct hostapd_data *hapd,
++		      const struct ieee80211_mgmt *mgmt, size_t len,
++		      int ssi_signal)
++{
++	return monitor_report_probe_req(hapd->mon_data, hapd->own_addr,mgmt->sa, ntohs(mgmt->seq_ctrl), ssi_signal);
++}
++
++
++static int monitor_data_init(struct monitor_data *mon_data)
++{
++	mon_data->socket_fd = socket(PF_INET, SOCK_DGRAM, 0);
++	if (mon_data->socket_fd < 0)
++	{
++		wpa_printf(MSG_ERROR, "[monitor] failed to create socket, error = %d, message = %s", errno, strerror(errno));
++		return -errno;
++	}
++
++	mon_data->server.sin_family = AF_INET;
++	mon_data->server.sin_addr.s_addr = inet_addr(DEFAULT_SERVER_ADDR);
++	mon_data->server.sin_port = htons(DEFAULT_SERVER_PORT);
++
++	return 0;
++}
++
++
++static int monitor_report_probe_req(struct monitor_data *mon_data,
++		const u8 *ra, const u8 *ta, u16 seq, int rssi)
++{
++	char buffer[128];
++	time_t tsf;
++	size_t len;
++
++	if (!mon_data || mon_data->socket_fd < 0)
++	{
++		return 0;
++	}
++
++	tsf = time(NULL);
++	sprintf(buffer, "ra=" MACSTR " ta=" MACSTR " tsf=%lu seq=%u rssi=%d",
++		MAC2STR(ra), MAC2STR(ta), tsf, seq, rssi);
++
++	len = strlen(buffer);
++	if (len != (size_t)sendto(mon_data->socket_fd, buffer, len, 0, (struct sockaddr *)&mon_data->server, sizeof(mon_data->server)))
++	{
++		wpa_printf(MSG_ERROR, "[monitor] failed to send packet, error = %d, message : %s", errno, strerror(errno));
++	}
++
++	return 0;
++}
++
++#endif
++
+diff --git a/src/ap/monitor.h b/src/ap/monitor.h
+new file mode 100644
+index 0000000..5b99832
+--- /dev/null
++++ b/src/ap/monitor.h
+@@ -0,0 +1,31 @@
++/**
++ * All rights reserved.
++ *
++ * Name:		monitor.h
++ * Created by:	King Li
++ * Created:		10/12/2015 18:00:40
++ * Purpose:
++ */
++
++
++#pragma once
++
++#ifdef CONFIG_MONITOR
++#include <netinet/in.h>
++
++struct hostapd_data;
++struct ieee80211_mgmt;
++
++struct monitor_data
++{
++	struct sockaddr_in server;
++	int socket_fd;
++};
++
++int hostapd_monitor_init(struct hostapd_data *hapd);
++
++int hostapd_monitor_probe_req_rx(struct hostapd_data *hapd,
++		      const struct ieee80211_mgmt *mgmt, size_t len,
++		      int ssi_signal);
++#endif
++

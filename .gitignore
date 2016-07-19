@@ -38,3 +38,4 @@ test/sender
 
 # Output directories
 analyzer/bin/
+.metadata/

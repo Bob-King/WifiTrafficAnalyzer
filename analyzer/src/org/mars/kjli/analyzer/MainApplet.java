@@ -1,5 +1,6 @@
 package org.mars.kjli.analyzer;
 
+import java.awt.BorderLayout;
 import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -154,8 +155,9 @@ public class MainApplet extends JApplet {
 
 	private void doInitPanel() {
 		mTextArea = new JTextArea();
+		mTextArea.setText("ABC");
 		mTextArea.setEnabled(false);
-		add(mTextArea);
+		add(mTextArea, BorderLayout.SOUTH);
 	}
 	
 	private Trainer mTrainer = Trainer.instantiate();

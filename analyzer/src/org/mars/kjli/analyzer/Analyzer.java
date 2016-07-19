@@ -6,8 +6,6 @@ import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -36,7 +34,7 @@ public class Analyzer {
 					if (!mTracks.containsKey(record.ta)) {
 						mTracks.put(
 								record.ta,
-								new HashMap<TrackRecord.Header, TrackRecord.Body>());
+								new TreeMap<Long, TrackRecords>());
 					}
 
 					addProbeRequestRecord(mTracks.get(record.ta), record);
@@ -52,29 +50,38 @@ public class Analyzer {
 	}
 	
 	public void analyze() {
-		
+		for (long ta : mTracks.keySet()) {
+			LocationRecords lrs = mLocations.get(ta);
+			if (lrs == null) {
+				lrs = mLocations.put(ta, new LocationRecords());
+			}
+			
+			SortedMap<Long, TrackRecords> map = mTracks.get(ta);
+			
+			for (long tsf : map.keySet()) {
+				TrackRecords rrs = map.get(tsf);
+			}
+		}
 	}
 
 	private static void addProbeRequestRecord(
-			HashMap<TrackRecord.Header, TrackRecord.Body> map,
+			SortedMap<Long, TrackRecords> map,
 			ProbeRequestRecord record) {
 		if (record.rssi < Utils.MIN_VALID_RSSI
 				|| record.rssi > Utils.MAX_VALID_RSSI) {
 			return;
 		}
-
-		TrackRecord.Header hdr = new TrackRecord.Header();
-		hdr.tsf = record.tsf;
-		hdr.seq = record.seq;
-
-		if (!map.containsKey(hdr)) {
-			map.put(hdr, new TrackRecord.Body());
+		
+		TrackRecords trs = map.get(record.tsf); 
+		
+		if (trs == null) {
+			trs = map.put(record.tsf, new TrackRecords());
 		}
-
-		map.get(hdr).add(record.ra, record.rssi);
+		
+		trs.add(record.ra, record.seq, record.rssi);
 	}
 
-	private Map<Long, HashMap<TrackRecord.Header, TrackRecord.Body>> mTracks = new TreeMap<>();
-	private SortedMap<Long, ArrayList<Short>> mTimestamp2SequenceMap = new TreeMap<>();
+	private Map<Long, SortedMap<Long, TrackRecords>> mTracks = new TreeMap<>();
+	private Map<Long, LocationRecords> mLocations = new TreeMap<>();
 
 }

@@ -95,7 +95,7 @@ public class MainApplet extends JApplet {
 					MyLogger.info("Try to load database "
 							+ file.getAbsolutePath());
 					try {
-						Database.storeToXmlFile(mDatabase, file);
+						mDatabase = Database.loadFromXmlFile(file);
 					} catch (Exception e) {
 						MyLogger.loge("Failed to load database!", e);
 					}
@@ -142,7 +142,21 @@ public class MainApplet extends JApplet {
 
 			@Override
 			public void actionPerformed(ActionEvent event) {
-				// TODO Auto-generated method stub
+				JFileChooser chooser = new JFileChooser();
+				chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+				int ret = chooser.showOpenDialog(MainApplet.this);
+				if (ret == JFileChooser.APPROVE_OPTION) {
+					File file = chooser.getSelectedFile();
+					MyLogger.info("Try to load directory: "
+							+ file.getAbsolutePath());
+					try {
+						mAnalyzer = new Analyzer(mDatabase);
+						mAnalyzer.load(file);
+						mAnalyzer.analyze();
+					} catch (Exception e) {
+						MyLogger.loge("Failed in analyze data!", e);
+					}
+				}
 
 			}
 
@@ -162,6 +176,7 @@ public class MainApplet extends JApplet {
 	
 	private Trainer mTrainer = Trainer.instantiate();
 	private Database mDatabase;
+	private Analyzer mAnalyzer;
 	
 	private JTextArea mTextArea;
 

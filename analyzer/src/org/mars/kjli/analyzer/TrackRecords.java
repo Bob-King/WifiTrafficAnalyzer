@@ -1,7 +1,10 @@
 package org.mars.kjli.analyzer;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Map;
 import java.util.SortedSet;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 public class TrackRecords {
@@ -10,7 +13,7 @@ public class TrackRecords {
 		public long ra;
 		public int seq;
 		public byte rssi;
-		
+
 		public Record(long ra, int seq, byte rssi) {
 			this.ra = ra;
 			this.seq = seq;
@@ -41,10 +44,87 @@ public class TrackRecords {
 
 	}
 	
+	private static class RssiTable {
+		byte[] table = new byte[Utils.MAX_VALID_RSSI - Utils.MIN_VALID_RSSI + 1];
+		
+		public static int rssi2Index(byte rssi) {
+			return rssi - Utils.MIN_VALID_RSSI;
+		}
+		
+		public static byte index2Rssi(int index) {
+			return (byte)(index + Utils.MIN_VALID_RSSI);
+		}
+		
+		public void increaseRssiCount(byte rssi, byte cnt) {
+			table[rssi2Index(rssi)] += cnt;
+		}
+		
+		public byte populerRssi() {
+			int popular = 0;
+			for (int i = 1; i != table.length; ++i) {
+				if (table[i] > table[popular]) {
+					popular = i;
+				}
+			}
+			
+			return index2Rssi(popular);
+		}
+	}
+	
+	public TrackRecords reduce() {
+		Map<Long, RssiTable> map = new TreeMap<>();
+		for (Record r : mRecords) {
+			if (!map.containsKey(r.ra)) {
+				map.put(r.ra, new RssiTable());
+			}
+			
+			RssiTable table = map.get(r.ra);
+			table.increaseRssiCount(r.rssi, (byte)1);
+			if (r.rssi - (byte)2 >= Utils.MIN_VALID_RSSI) {
+				table.increaseRssiCount((byte)(r.rssi - 2), (byte)1);
+			}
+			if (r.rssi - (byte)1 >= Utils.MIN_VALID_RSSI) {
+				table.increaseRssiCount((byte)(r.rssi - 1), (byte)1);
+			}
+			if (r.rssi + (byte)1 <= Utils.MAX_VALID_RSSI) {
+				table.increaseRssiCount((byte)(r.rssi + 1), (byte)1);
+			}
+			if (r.rssi + (byte)2 <= Utils.MAX_VALID_RSSI) {
+				table.increaseRssiCount((byte)(r.rssi + 2), (byte)1);
+			}
+		}
+		
+		TrackRecords ret = new TrackRecords();
+		
+		for (long ra: map.keySet()) {
+			ret.add(ra,  0, map.get(ra).populerRssi());
+		}		
+		
+		return ret;
+	}
+
+	// FIX ME: bad performance, need re-implementation
+	public ArrayList<Record> packetsWithSeq(int seq) {
+		if (seq < mRecords.first().seq || seq > mRecords.last().seq) {
+			return new ArrayList<Record>();
+		}
+
+		ArrayList<Record> ret = new ArrayList<>();
+		for (Record r : mRecords) {
+			if (seq == r.seq) {
+				ret.add(r);
+			} else if (seq < r.seq) {
+				break;
+			}
+		}
+
+		return ret;
+	}
+
 	public SortedSet<Record> Records() {
 		return mRecords;
 	}
-	
+
 	public void add(long ra, int seq, byte rssi) {
 		mRecords.add(new Record(ra, seq, rssi));
 	}

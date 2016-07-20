@@ -12,6 +12,10 @@ import java.util.TreeMap;
 import java.util.logging.Level;
 
 public class Analyzer {
+	
+	public Analyzer(Database database) {
+		mDatabase = database;
+	}
 
 	public void load(File file) throws IOException {
 
@@ -59,10 +63,30 @@ public class Analyzer {
 			SortedMap<Long, TrackRecords> map = mTracks.get(ta);
 			
 			for (long tsf : map.keySet()) {
-				TrackRecords rrs = map.get(tsf);
+				TrackRecords trs = map.get(tsf);
+				trs = trs.reduce();
+				
+				RssiRecord[] rssiRecords = new RssiRecord[trs.Records().size()];
+				
+				int i = 0;
+				for (TrackRecords.Record tr : trs.Records()) {
+					rssiRecords[i].ra = tr.ra;
+					rssiRecords[i++].rssi = tr.rssi;
+				}
+				
+				String location = mDatabase.queryLocation(rssiRecords);
+				if (!location.equals("")) {
+					lrs.add(tsf, location);
+				}
 			}
 		}
 	}
+	
+	/*
+	private String TrackRecord2Location(TrackRecords trs) {
+		
+	}
+	*/
 
 	private static void addProbeRequestRecord(
 			SortedMap<Long, TrackRecords> map,
@@ -83,5 +107,6 @@ public class Analyzer {
 
 	private Map<Long, SortedMap<Long, TrackRecords>> mTracks = new TreeMap<>();
 	private Map<Long, LocationRecords> mLocations = new TreeMap<>();
+	private Database mDatabase;
 
 }

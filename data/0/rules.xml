@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<rules>
+	<rule>
+		<tx_sta>18:59:36:1f:64:d9</tx_sta>
+		<location>A</location>
+		<tx_power>0</tx_power>
+		<start_time>2016-09-10 19:43:00 +0800</start_time>
+		<end_time>2016-09-10 20:00:00 +0800</end_time>
+	</rule>
+	<rule>
+		<tx_sta>18:59:36:1f:64:d9</tx_sta>
+		<location>B</location>
+		<tx_power>0</tx_power>
+		<start_time>2016-09-10 20:02:00 +0800</start_time>
+		<end_time>2016-09-10 20:15:00 +0800</end_time>
+	</rule>
+	<rule>
+		<tx_sta>18:59:36:1f:64:d9</tx_sta>
+		<location>C</location>
+		<tx_power>0</tx_power>
+		<start_time>2016-09-10 20:20:00 +0800</start_time>
+		<end_time>2016-09-10 20:35:00 +0800</end_time>
+	</rule>
+	<rule>
+		<tx_sta>18:59:36:1f:64:d9</tx_sta>
+		<location>D</location>
+		<tx_power>0</tx_power>
+		<start_time>2016-09-10 20:40:00 +0800</start_time>
+		<end_time>2016-09-10 20:50:00 +0800</end_time>
+	</rule>
+</rules>

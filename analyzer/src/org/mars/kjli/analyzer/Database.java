@@ -84,6 +84,8 @@ public abstract class Database {
 
 	public abstract String queryLocation(RssiRecord[] q);
 	
+	public abstract void ellipse();
+	
 	public static class RssiDatabase extends Database {
 
 		public RssiDatabase() {
@@ -139,7 +141,7 @@ public abstract class Database {
 												.toString(relation.txPower)));
 
 						for (int i = 0; i != relation.rssiSeenTable.length; ++i) {
-							if (relation.rssiSeenTable[i] == 0) {
+							if (relation.rssiSeenTable[i] < RSSI_SEEN_TIMES_THRESHOLD) {
 								continue;
 							}
 
@@ -156,7 +158,7 @@ public abstract class Database {
 									.appendChild(
 											doc.createElement(TAG_SEEN_TIMES))
 									.appendChild(
-											doc.createTextNode(Byte
+											doc.createTextNode(Short
 													.toString(relation.rssiSeenTable[i])));
 						}
 					}
@@ -286,15 +288,15 @@ public abstract class Database {
 
 				List<TpRssiRelation> relations = m.get(r.ra);
 
-				boolean added = false;
+				boolean found = false;
 				final int index = rssi2RssiArrayIndex(r.rssi);
 
 				for (TpRssiRelation tr : relations) {
 					if (tr.txPower == tp) {
-						if (tr.rssiSeenTable[index] < Byte.MAX_VALUE) {
+						found = true;
+						if (tr.rssiSeenTable[index] < Short.MAX_VALUE) {
 							++tr.rssiSeenTable[index];
 							++tr.totalRssiSeen;
-							added = true;
 							
 							if (r.rssi < tr.minRssi) {
 								tr.minRssi = r.rssi;
@@ -306,11 +308,11 @@ public abstract class Database {
 					}
 				}
 
-				if (!added) {
+				if (!found) {
 					relations.add(new TpRssiRelation());
 					TpRssiRelation tr = relations.get(relations.size() - 1);
 					tr.txPower = tp;
-					if (tr.rssiSeenTable[index] < Byte.MAX_VALUE) {
+					if (tr.rssiSeenTable[index] < Short.MAX_VALUE) {
 						++tr.rssiSeenTable[index];
 						++tr.totalRssiSeen;
 						
@@ -394,10 +396,36 @@ public abstract class Database {
 
 		private static class TpRssiRelation {
 			public int txPower = INVALID_TX_POWER;
+			public byte centreRssi = 0;
+			public byte rssiRadius = 0;
 			public int totalRssiSeen;
 			public byte minRssi = Utils.MAX_VALID_RSSI;
 			public byte maxRssi = Utils.MIN_VALID_RSSI;
-			public byte[] rssiSeenTable = new byte[N_RSSI_ARRAY];
+			public short[] rssiSeenTable = new short[N_RSSI_ARRAY];
+			
+			private static final int ELLIPSE_COVER_PERCENTAGE = 75;
+			
+			public void ellipse() {
+				int ci = 0;
+				for (int i = 1; i != rssiSeenTable.length; ++i) {
+					if (rssiSeenTable[ci] < rssiSeenTable[i]) {
+						ci = i;
+					}
+				}
+				
+				centreRssi = rssiArrayIndex2rssi(ci);
+				
+				rssiRadius = 0;
+				short seen = rssiSeenTable[ci];
+				while (seen * 100 < totalRssiSeen * ELLIPSE_COVER_PERCENTAGE) {
+					++rssiRadius;
+					if (ci - rssiRadius >= 0) {
+						seen += rssiSeenTable[ci - rssiRadius];
+					} else if (ci + rssiRadius < rssiSeenTable.length) {
+						seen += rssiSeenTable[ci + rssiRadius];
+					}
+				}
+			}
 		}
 
 		private static int rssi2RssiArrayIndex(byte rssi) {
@@ -433,8 +461,14 @@ public abstract class Database {
 		private static final String TAG_RSSI = "rssi";
 
 		private static final String TAG_SEEN_TIMES = "seen_times";
+		
+		private static final String TAG_CENTRE_RSSI = "centre_rssi";
+		
+		private static final String TAG_RSSI_RADIUS = "rssi_radius";
 
 		private static final int F_ACTOR_MISS = 1;
+		
+		private static final int RSSI_SEEN_TIMES_THRESHOLD = 10;
 
 		@Override
 		public XmlLoader getXmlLoader() {
@@ -459,6 +493,23 @@ public abstract class Database {
 				}
 				
 			};
+		}
+
+		@Override
+		public void ellipse() {
+			for (String location : mData.keySet()) {
+
+				Map<Long, ArrayList<TpRssiRelation>> raRecord = mData
+						.get(location);
+
+				for (long ra : raRecord.keySet()) {
+
+					for (TpRssiRelation relation : raRecord.get(ra)) {
+						
+						relation.ellipse();
+					}
+				}
+			}
 		}
 
 	}
@@ -501,6 +552,12 @@ public abstract class Database {
 				}
 				
 			};
+		}
+
+		@Override
+		public void ellipse() {
+			// TODO Auto-generated method stub
+			
 		}
 		
 	}

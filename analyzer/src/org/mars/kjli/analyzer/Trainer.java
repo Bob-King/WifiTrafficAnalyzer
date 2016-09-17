@@ -25,7 +25,7 @@ public class Trainer {
 		return new Trainer();
 	}
 
-	public void train(File file) throws Exception {
+	public Database train(File file) throws Exception {
 
 		if (!file.isDirectory()) {
 			throw new IllegalArgumentException("Directory must be specified!");
@@ -73,6 +73,10 @@ public class Trainer {
 			}
 
 		}
+		
+		mDatabase.ellipse();
+		
+		return mDatabase;
 
 	}
 	

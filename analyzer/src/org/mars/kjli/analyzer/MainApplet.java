@@ -34,6 +34,16 @@ public class MainApplet extends JApplet {
 	private void doInitMenubar() {
 		JMenuBar menubar = new JMenuBar();
 		JMenu fileMenu = new JMenu("File");
+		
+		fileMenu.add("Reset").addActionListener(
+				new ActionListener() {
+
+					@Override
+					public void actionPerformed(ActionEvent arg0) {
+						mTrainer = Trainer.instantiate();						
+					}
+					
+				});
 
 		fileMenu.add("Transform wta log file").addActionListener(
 				new ActionListener() {
@@ -44,9 +54,13 @@ public class MainApplet extends JApplet {
 						chooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
 						chooser.setFileFilter(new FileNameExtensionFilter(
 								"Xml files", "log"));
+						if (mCurrentDirectory != null) {
+							chooser.setCurrentDirectory(mCurrentDirectory);
+						}
 						int ret = chooser.showOpenDialog(MainApplet.this);
 						if (ret == JFileChooser.APPROVE_OPTION) {
 							File file = chooser.getSelectedFile();
+							setCurrentDirectory(file);
 							MyLogger.info("Try to transform log file "
 									+ file.getAbsolutePath());
 							try {
@@ -66,13 +80,17 @@ public class MainApplet extends JApplet {
 			public void actionPerformed(ActionEvent event) {
 				JFileChooser chooser = new JFileChooser();
 				chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+				if (mCurrentDirectory != null) {
+					chooser.setCurrentDirectory(mCurrentDirectory);
+				}
 				int ret = chooser.showOpenDialog(MainApplet.this);
 				if (ret == JFileChooser.APPROVE_OPTION) {
 					File file = chooser.getSelectedFile();
+					setCurrentDirectory(file);
 					MyLogger.info("Try to load directory: "
 							+ file.getAbsolutePath());
 					try {
-						mTrainer.train(file);
+						mDatabase = mTrainer.train(file);
 					} catch (Exception e) {
 						MyLogger.loge("Failed in trainning data!", e);
 					}
@@ -89,9 +107,13 @@ public class MainApplet extends JApplet {
 				chooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
 				chooser.setFileFilter(new FileNameExtensionFilter("Xml files",
 						"xml"));
+				if (mCurrentDirectory != null) {
+					chooser.setCurrentDirectory(mCurrentDirectory);
+				}
 				int ret = chooser.showOpenDialog(MainApplet.this);
 				if (ret == JFileChooser.APPROVE_OPTION) {
 					File file = chooser.getSelectedFile();
+					setCurrentDirectory(file);
 					MyLogger.info("Try to load database "
 							+ file.getAbsolutePath());
 					try {
@@ -113,9 +135,13 @@ public class MainApplet extends JApplet {
 				chooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
 				chooser.setFileFilter(new FileNameExtensionFilter("Xml files",
 						"xml"));
+				if (mCurrentDirectory != null) {
+					chooser.setCurrentDirectory(mCurrentDirectory);
+				}
 				int ret = chooser.showSaveDialog(MainApplet.this);
 				if (ret == JFileChooser.APPROVE_OPTION) {
 					File file = chooser.getSelectedFile();
+					setCurrentDirectory(file);
 					MyLogger.info("Try to save database "
 							+ file.getAbsolutePath());
 					try {
@@ -144,9 +170,13 @@ public class MainApplet extends JApplet {
 			public void actionPerformed(ActionEvent event) {
 				JFileChooser chooser = new JFileChooser();
 				chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+				if (mCurrentDirectory != null) {
+					chooser.setCurrentDirectory(mCurrentDirectory);
+				}
 				int ret = chooser.showOpenDialog(MainApplet.this);
 				if (ret == JFileChooser.APPROVE_OPTION) {
 					File file = chooser.getSelectedFile();
+					setCurrentDirectory(file);
 					MyLogger.info("Try to load directory: "
 							+ file.getAbsolutePath());
 					try {
@@ -166,6 +196,12 @@ public class MainApplet extends JApplet {
 		setJMenuBar(menubar);
 
 	}
+	
+	private void setCurrentDirectory(File dir) {
+		if (dir.isDirectory()) {
+			mCurrentDirectory = dir;
+		}
+	}
 
 	private void doInitPanel() {
 		mTextArea = new JTextArea();
@@ -177,6 +213,7 @@ public class MainApplet extends JApplet {
 	private Trainer mTrainer = Trainer.instantiate();
 	private Database mDatabase;
 	private Analyzer mAnalyzer;
+	private File mCurrentDirectory;
 	
 	private JTextArea mTextArea;
 

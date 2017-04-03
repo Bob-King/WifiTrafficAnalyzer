@@ -8,11 +8,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.SortedMap;
+import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.logging.Level;
 
 public class Analyzer {
-	
+
 	public Analyzer(Database database) {
 		mDatabase = database;
 	}
@@ -23,58 +24,47 @@ public class Analyzer {
 			throw new IllegalArgumentException("Directory must be specified!");
 		}
 
-		try (DirectoryStream<Path> entries = Files.newDirectoryStream(
-				file.toPath(), "*.log")) {
+		try (DirectoryStream<Path> entries = Files.newDirectoryStream(file.toPath(), "*.log")) {
 
 			for (Path entry : entries) {
 				if (Files.isDirectory(entry)) {
 					continue;
 				}
 
-				try (ProbeRequestReader reader = new ProbeRequestReader(
-						new FileInputStream(entry.toFile()))) {
+				try (ProbeRequestReader reader = new ProbeRequestReader(new FileInputStream(entry.toFile()))) {
 
-					ProbeRequestRecord record = reader.readProbeRequestRecord();
-					if (!mTracks.containsKey(record.ta)) {
-						mTracks.put(
-								record.ta,
-								new TreeMap<Long, TrackRecords>());
-					}
+					do {
+						ProbeRequestRecord record = reader.readProbeRequestRecord();
+						if (record == null) {
+							break;
+						}
+						
+						if (!mTracks.containsKey(record.ta)) {
+							mTracks.put(record.ta, new TreeMap<Long, TrackRecords>());
+						}
 
-					addProbeRequestRecord(mTracks.get(record.ta), record);
+						addProbeRequestRecord(mTracks.get(record.ta), record);
+					} while (true);
 
 				} catch (IOException e) {
-					MyLogger.get().log(Level.WARNING,
-							"Reading file from " + entry.toString(), e);
+					MyLogger.get().log(Level.WARNING, "Reading file from " + entry.toString(), e);
 				}
 			}
-
 		}
-
 	}
-	
+
 	public void analyze() {
 		for (long ta : mTracks.keySet()) {
 			LocationRecords lrs = mLocations.get(ta);
 			if (lrs == null) {
-				lrs = mLocations.put(ta, new LocationRecords());
+				mLocations.put(ta, new LocationRecords());
+				lrs = mLocations.get(ta);
 			}
-			
+
 			SortedMap<Long, TrackRecords> map = mTracks.get(ta);
-			
+
 			for (long tsf : map.keySet()) {
-				TrackRecords trs = map.get(tsf);
-				trs = trs.reduce();
-				
-				RssiRecord[] rssiRecords = new RssiRecord[trs.Records().size()];
-				
-				int i = 0;
-				for (TrackRecords.Record tr : trs.Records()) {
-					rssiRecords[i].ra = tr.ra;
-					rssiRecords[i++].rssi = tr.rssi;
-				}
-				
-				String location = mDatabase.queryLocation(rssiRecords);
+				String location = queryLocation(map.get(tsf));
 				if (!location.equals("")) {
 					lrs.add(tsf, location);
 				}
@@ -82,26 +72,60 @@ public class Analyzer {
 		}
 	}
 	
-	/*
-	private String TrackRecord2Location(TrackRecords trs) {
+	public String queryLocation(TrackRecords trackRecords) {
+		trackRecords = trackRecords.reduce();
 		
-	}
-	*/
+		// TODO: need improvement for only one situation that only one AP received packets  
+		if (trackRecords.records().size() < 2) {
+			return "";
+		}
 
-	private static void addProbeRequestRecord(
-			SortedMap<Long, TrackRecords> map,
-			ProbeRequestRecord record) {
-		if (record.rssi < Utils.MIN_VALID_RSSI
-				|| record.rssi > Utils.MAX_VALID_RSSI) {
+		RssiRecord[] rssiRecords = new RssiRecord[trackRecords.records().size()];
+
+		int i = 0;
+		for (TrackRecords.Record tr : trackRecords.records()) {
+			rssiRecords[i++] = new RssiRecord(tr.ra, tr.rssi);
+		}
+
+		return mDatabase.queryLocation(rssiRecords);
+	}
+
+	public String dump() {
+		StringBuilder sb = new StringBuilder();
+		for (long ta : mLocations.keySet()) {
+			sb.append("MAC: " + Utils.long2MacAddress(ta) + "\n");
+
+			SortedSet<LocationRecords.Record> records = mLocations.get(ta).Records();
+
+			for (LocationRecords.Record record : records) {
+				sb.append(Utils.formatTsf(record.tsf) + " : " + record.loc + "\n");
+			}
+
+		}
+
+		return sb.toString();
+	}
+
+	public Map<Long, SortedMap<Long, TrackRecords>> getTracks() {
+		return mTracks;
+	}
+	
+	public Map<Long, LocationRecords> getLocations() {
+		return mLocations;
+	}
+
+	private static void addProbeRequestRecord(SortedMap<Long, TrackRecords> map, ProbeRequestRecord record) {
+		if (record.rssi < Utils.MIN_VALID_RSSI || record.rssi > Utils.MAX_VALID_RSSI) {
 			return;
 		}
-		
-		TrackRecords trs = map.get(record.tsf); 
-		
+
+		TrackRecords trs = map.get(record.tsf);
+
 		if (trs == null) {
-			trs = map.put(record.tsf, new TrackRecords());
+			map.put(record.tsf, new TrackRecords());
+			trs = map.get(record.tsf);
 		}
-		
+
 		trs.add(record.ra, record.seq, record.rssi);
 	}
 

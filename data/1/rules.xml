@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<rules>
+	<rule>
+		<tx_sta>8c:fd:f0:07:8c:0a</tx_sta>
+		<location>A</location>
+		<tx_power>0</tx_power>
+		<start_time>2016-09-16 13:25:00 +0800</start_time>
+		<end_time>2016-09-16 13:35:00 +0800</end_time>
+	</rule>
+	<rule>
+		<tx_sta>8c:fd:f0:07:8c:0a</tx_sta>
+		<location>B</location>
+		<tx_power>0</tx_power>
+		<start_time>2016-09-16 13:37:00 +0800</start_time>
+		<end_time>2016-09-16 13:50:00 +0800</end_time>
+	</rule>
+	<rule>
+		<tx_sta>8c:fd:f0:07:8c:0a</tx_sta>
+		<location>C</location>
+		<tx_power>0</tx_power>
+		<start_time>2016-09-16 13:52:00 +0800</start_time>
+		<end_time>2016-09-16 14:10:00 +0800</end_time>
+	</rule>
+	<rule>
+		<tx_sta>8c:fd:f0:07:8c:0a</tx_sta>
+		<location>D</location>
+		<tx_power>0</tx_power>
+		<start_time>2016-09-16 14:13:00 +0800</start_time>
+		<end_time>2016-09-16 14:30:00 +0800</end_time>
+	</rule>
+	<rule>
+		<tx_sta>8c:fd:f0:07:8c:0a</tx_sta>
+		<location>E</location>
+		<tx_power>0</tx_power>
+		<start_time>2016-09-16 14:32:00 +0800</start_time>
+		<end_time>2016-09-16 14:45:00 +0800</end_time>
+	</rule>
+	<rule>
+		<tx_sta>8c:fd:f0:07:8c:0a</tx_sta>
+		<location>F</location>
+		<tx_power>0</tx_power>
+		<start_time>2016-09-16 14:46:00 +0800</start_time>
+		<end_time>2016-09-16 15:00:00 +0800</end_time>
+	</rule>
+</rules>

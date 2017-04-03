@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<rules>
+	<rule>
+		<tx_sta>18:59:36:1f:64:d9</tx_sta>
+		<location>A0</location>
+		<tx_power>0</tx_power>
+		<start_time>2016-10-29 17:00:00 +0800</start_time>
+		<end_time>2016-10-29 17:20:00 +0800</end_time>
+	</rule>
+	<rule>
+		<tx_sta>18:59:36:1f:64:d9</tx_sta>
+		<location>A1</location>
+		<tx_power>0</tx_power>
+		<start_time>2016-10-29 17:22:00 +0800</start_time>
+		<end_time>2016-10-29 17:44:00 +0800</end_time>
+	</rule>
+	<rule>
+		<tx_sta>18:59:36:1f:64:d9</tx_sta>
+		<location>A2</location>
+		<tx_power>0</tx_power>
+		<start_time>2016-10-29 17:46:00 +0800</start_time>
+		<end_time>2016-10-29 18:06:00 +0800</end_time>
+	</rule>
+
+	<rule>
+		<tx_sta>98:fa:e3:41:e9:cf</tx_sta>
+		<location>A1</location>
+		<tx_power>0</tx_power>
+		<start_time>2016-10-29 17:00:00 +0800</start_time>
+		<end_time>2016-10-29 17:20:00 +0800</end_time>
+	</rule>
+	<rule>
+		<tx_sta>98:fa:e3:41:e9:cf</tx_sta>
+		<location>A2</location>
+		<tx_power>0</tx_power>
+		<start_time>2016-10-29 17:22:00 +0800</start_time>
+		<end_time>2016-10-29 17:44:00 +0800</end_time>
+	</rule>
+	<rule>
+		<tx_sta>98:fa:e3:41:e9:cf</tx_sta>
+		<location>A0</location>
+		<tx_power>0</tx_power>
+		<start_time>2016-10-29 17:46:00 +0800</start_time>
+		<end_time>2016-10-29 18:06:00 +0800</end_time>
+	</rule>
+</rules>

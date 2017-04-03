@@ -1,6 +1,7 @@
 package org.mars.kjli.analyzer;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.EventQueue;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -159,7 +160,25 @@ public class MainApplet extends JApplet {
 
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
-				mTextArea.append("\nValidate");				
+
+				JFileChooser chooser = new JFileChooser();
+				chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+				if (mCurrentDirectory != null) {
+					chooser.setCurrentDirectory(mCurrentDirectory);
+				}
+				int ret = chooser.showOpenDialog(MainApplet.this);
+				if (ret == JFileChooser.APPROVE_OPTION) {
+					File file = chooser.getSelectedFile();
+					setCurrentDirectory(file);
+					MyLogger.info("Try to load directory: "
+							+ file.getAbsolutePath());
+					try {
+						mValidator.validate(mDatabase, file);
+						mTextArea.setText(mValidator.dump());
+					} catch (Exception e) {
+						MyLogger.loge("Failed in validate data!", e);
+					}
+				}
 			}
 			
 		});
@@ -183,6 +202,7 @@ public class MainApplet extends JApplet {
 						mAnalyzer = new Analyzer(mDatabase);
 						mAnalyzer.load(file);
 						mAnalyzer.analyze();
+						mTextArea.setText(mAnalyzer.dump());
 					} catch (Exception e) {
 						MyLogger.loge("Failed in analyze data!", e);
 					}
@@ -206,13 +226,15 @@ public class MainApplet extends JApplet {
 	private void doInitPanel() {
 		mTextArea = new JTextArea();
 		mTextArea.setText("ABC");
-		mTextArea.setEnabled(false);
-		add(mTextArea, BorderLayout.SOUTH);
+		// mTextArea.setEnabled(false);
+		// mTextArea.setForeground(Color.BLACK);
+		add(mTextArea, BorderLayout.CENTER);
 	}
 	
 	private Trainer mTrainer = Trainer.instantiate();
 	private Database mDatabase;
 	private Analyzer mAnalyzer;
+	private Validator mValidator = new Validator();
 	private File mCurrentDirectory;
 	
 	private JTextArea mTextArea;

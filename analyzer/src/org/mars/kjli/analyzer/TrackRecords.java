@@ -21,6 +21,21 @@ public class TrackRecords {
 		}
 
 		@Override
+		public String toString() {
+			StringBuilder sb = new StringBuilder();
+			
+			sb.append("{ ra = ");
+			sb.append(Utils.long2MacAddress(ra));
+			sb.append(", seq = ");
+			sb.append(seq);
+			sb.append(", rssi = ");
+			sb.append(rssi);
+			sb.append("}");
+			
+			return sb.toString();
+		}
+
+		@Override
 		public boolean equals(Object obj) {
 			if (this == obj) {
 				return true;
@@ -79,7 +94,11 @@ public class TrackRecords {
 			}
 			
 			RssiTable table = map.get(r.ra);
-			table.increaseRssiCount(r.rssi, (byte)1);
+			if (r.rssi >= Utils.MIN_VALID_RSSI && r.rssi <= Utils.MAX_VALID_RSSI) {
+				table.increaseRssiCount(r.rssi, (byte) 1);
+			}
+			
+			/*
 			if (r.rssi - (byte)2 >= Utils.MIN_VALID_RSSI) {
 				table.increaseRssiCount((byte)(r.rssi - 2), (byte)1);
 			}
@@ -92,6 +111,7 @@ public class TrackRecords {
 			if (r.rssi + (byte)2 <= Utils.MAX_VALID_RSSI) {
 				table.increaseRssiCount((byte)(r.rssi + 2), (byte)1);
 			}
+			*/
 		}
 		
 		TrackRecords ret = new TrackRecords();
@@ -101,6 +121,21 @@ public class TrackRecords {
 		}		
 		
 		return ret;
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append('{');
+		
+		for (Record r : mRecords) {
+			sb.append(r);
+		}
+		
+		sb.append('}');
+		
+		return sb.toString();
 	}
 
 	// FIX ME: bad performance, need re-implementation
@@ -121,7 +156,7 @@ public class TrackRecords {
 		return ret;
 	}
 
-	public SortedSet<Record> Records() {
+	public SortedSet<Record> records() {
 		return mRecords;
 	}
 
@@ -134,17 +169,21 @@ public class TrackRecords {
 
 				@Override
 				public int compare(Record o1, Record o2) {
-					if (o1.seq < o2.seq) {
-						return -2;
-					} else if (o1.seq > o2.seq) {
-						return 2;
+					if (o1.ra < o2.ra) {
+						return -3;
+					} else if (o1.ra > o2.ra) {
+						return 3;
 					} else {
-						if (o1.ra < o2.ra) {
-							return -1;
-						} else if (o1.ra > o2.ra) {
-							return 1;
+						if (o1.rssi < o2.rssi) {
+							return -2;
+						} else if (o1.rssi > o2.rssi) {
+							return 2;
 						} else {
-							return 0;
+							if (o1.seq == o2.seq) {
+								return 0;
+							} else {
+								return o1.seq < o2.seq ? -1 : 1;
+							}
 						}
 					}
 				}
